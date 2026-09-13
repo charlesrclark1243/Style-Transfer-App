@@ -7,14 +7,19 @@ import random
 IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png']
 
 class StyleTransferDataset(Dataset):
-    def __init__(self, content_dir, style_dir, transform=None, random_style=True):
+    def __init__(self, content_dir, style_dir, transform=None, random_style=True, max_images=None):
         self.content_dir = Path(content_dir)
         self.style_dir = Path(style_dir)
         self.transform = transform
         self.random_style = random_style
+        self.max_images = max_images
 
         self.content_images = sorted(path for path in self.content_dir.glob('*') if path.suffix.lower() in IMAGE_EXTENSIONS)
         self.style_images = sorted(path for path in self.style_dir.glob('*') if path.suffix.lower() in IMAGE_EXTENSIONS)
+
+        if self.max_images is not None:
+            self.content_images = self.content_images[:self.max_images]
+            self.style_images = self.style_images[:self.max_images]
 
         if not self.content_images:
             raise ValueError(f"No content images found in {content_dir}")

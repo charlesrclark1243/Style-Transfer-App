@@ -11,6 +11,12 @@ import torch
 from pathlib import Path
 import argparse
 
+def positive_int(value):
+    value = int(value)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, got {value}")
+    return value
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a style transfer model.")
 
@@ -22,13 +28,17 @@ def parse_args():
     parser.add_argument('--learning-rate', type=float, default=0.001, help='Learning rate for the optimizer.')
     parser.add_argument('--gradnorm-alpha', type=float, default=1.5, help='GradNorm asymmetry; higher values balance training rates more strongly.')
     parser.add_argument('--gradnorm-learning-rate', type=float, default=0.01, help='Learning rate for the GradNorm loss weights.')
+    parser.add_argument('--max-train-images', type=positive_int, default=None, help='Maximum number of content and style training images to use (for debugging).')
+    parser.add_argument('--max-val-images', type=positive_int, default=None, help='Maximum number of content and style validation images to use (for debugging).')
 
     return parser.parse_args()
 
 def get_dataloaders(
     content_dir: str,
     style_dir: str,
-    batch_size: int = 8
+    batch_size: int = 8,
+    max_train_images: int = None,
+    max_val_images: int = None
 ):
     # Resize the shorter side then crop, so non-square images aren't stretched
     train_transform = Compose([
@@ -37,16 +47,16 @@ def get_dataloaders(
         ToTensor(),
     ])
     val_transform = Compose([
-        Resize(256),
-        CenterCrop(256),
+        Resize(512),
+        CenterCrop(512),
         ToTensor(),
     ])
 
     content_dir = Path(content_dir)
     style_dir = Path(style_dir)
 
-    train_dataset = StyleTransferDataset(content_dir / "train", style_dir / "train", transform=train_transform)
-    val_dataset = StyleTransferDataset(content_dir / "val", style_dir / "val", transform=val_transform, random_style=False)
+    train_dataset = StyleTransferDataset(content_dir / "train", style_dir / "train", transform=train_transform, max_images=max_train_images)
+    val_dataset = StyleTransferDataset(content_dir / "val", style_dir / "val", transform=val_transform, random_style=False, max_images=max_val_images)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
@@ -56,7 +66,7 @@ def get_dataloaders(
 def main():
     args = parse_args()
 
-    train_loader, val_loader = get_dataloaders(args.content_dir, args.style_dir, batch_size=args.batch_size)
+    train_loader, val_loader = get_dataloaders(args.content_dir, args.style_dir, batch_size=args.batch_size, max_train_images=args.max_train_images, max_val_images=args.max_val_images)
 
     model = StyleTransferModel()
     objective = CombinedObjective(gradnorm_alpha=args.gradnorm_alpha)
