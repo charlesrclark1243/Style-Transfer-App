@@ -8,23 +8,28 @@ import torch
 from pathlib import Path
 from tqdm import tqdm
 
+def format_losses(total_loss: float, losses: torch.Tensor) -> str:
+    terms = ", ".join(f"{name}={value:.3g}" for name, value in zip(CombinedObjective.LOSS_NAMES, losses.tolist()))
+    return f"Loss: {total_loss:.4f} | {terms}"
+
 def train_loop(
     model: StyleTransferModel,
     train_loader: DataLoader,
     optimizer: optim.Optimizer,
-    weight_optimizer: optim.Optimizer,
     objective: CombinedObjective,
     device: torch.device = torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
     ),
     epoch: int = 0,
     num_epochs: int = 10,
+    mixed_precision: bool = False,
 ) -> float:
 
     model.to(device)
     model.train()
 
     total_loss = 0.0
+    loss_sums = torch.zeros(len(CombinedObjective.LOSS_NAMES), device=device)
 
     loop = tqdm(train_loader)
     for batch_idx, (content_images, style_images) in enumerate(loop):
@@ -34,28 +39,23 @@ def train_loop(
         style_images = style_images.to(device)
 
         optimizer.zero_grad()
-        stylized_images = model(content_images, style_images)
 
-        identity_content = model(content_images, content_images)
-        identity_style = model(style_images, style_images)
+        # Forward passes run in bfloat16 when enabled; the backward pass stays outside autocast
+        with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=mixed_precision):
+            stylized_images, target_features = model.transfer(content_images, style_images)
 
-        balanced_losses, tv_loss = objective(stylized_images, content_images, style_images, identity_content, identity_style)
+            identity_content = model(content_images, content_images)
+            identity_style = model(style_images, style_images)
 
-        # GradNorm needs the graph intact, so it runs before the model's backward pass
-        objective.gradnorm.update_weight_gradients(balanced_losses, model.last_shared_parameter)
+            loss, losses = objective(stylized_images, target_features, content_images, style_images, identity_content, identity_style)
 
-        loss = objective.weighted_total(balanced_losses, tv_loss)
         loss.backward()
         optimizer.step()
 
-        weight_optimizer.step()
-        objective.gradnorm.renormalize()
-
+        # Running averages, so the bar shows the epoch mean of each loss rather than one noisy batch
         total_loss += loss.item()
-        weights = ", ".join(
-            f"{name}={weight:.2f}" for name, weight in zip(objective.BALANCED_LOSSES, objective.gradnorm.weights.tolist())
-        )
-        loop.set_postfix_str(f"Combined Loss: {loss.item():.4f} | Weights: {weights}")
+        loss_sums += losses.detach()
+        loop.set_postfix_str(format_losses(total_loss / (batch_idx + 1), loss_sums / (batch_idx + 1)))
 
     return total_loss / len(train_loader)
 
@@ -68,12 +68,14 @@ def val_loop(
     ),
     epoch: int = 0,
     num_epochs: int = 10,
+    mixed_precision: bool = False,
 ) -> float:
 
     model.to(device)
     model.eval()
 
     total_loss = 0.0
+    loss_sums = torch.zeros(len(CombinedObjective.LOSS_NAMES), device=device)
 
     loop = tqdm(val_loader)
     with torch.no_grad():
@@ -83,17 +85,17 @@ def val_loop(
             content_images = content_images.to(device)
             style_images = style_images.to(device)
 
-            stylized_images = model(content_images, style_images)
+            with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=mixed_precision):
+                stylized_images, target_features = model.transfer(content_images, style_images)
 
-            identity_content = model(content_images, content_images)
-            identity_style = model(style_images, style_images)
+                identity_content = model(content_images, content_images)
+                identity_style = model(style_images, style_images)
 
-            balanced_losses, tv_loss = objective(stylized_images, content_images, style_images, identity_content, identity_style)
-            # Fixed lambdas only, so validation loss stays comparable across epochs as the GradNorm weights move
-            loss = objective.weighted_total(balanced_losses, tv_loss, use_gradnorm_weights=False)
+                loss, losses = objective(stylized_images, target_features, content_images, style_images, identity_content, identity_style)
+
             total_loss += loss.item()
-
-            loop.set_postfix_str(f"Combined Loss: {loss.item():.4f}")
+            loss_sums += losses
+            loop.set_postfix_str(format_losses(total_loss / (batch_idx + 1), loss_sums / (batch_idx + 1)))
 
     return total_loss / len(val_loader)
 
@@ -102,11 +104,13 @@ def main_loop(
     train_loader: DataLoader,
     val_loader: DataLoader,
     optimizer: optim.Optimizer,
-    weight_optimizer: optim.Optimizer,
     objective: CombinedObjective,
     output_dir: Path,
+    model_name: str,
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-    num_epochs: int = 10
+    num_epochs: int = 10,
+    mixed_precision: bool = False,
+    start_epoch: int = 0,
 ):
     # Create the output directory up front so a bad path fails before training, not after
     output_dir = Path(output_dir)
@@ -114,8 +118,11 @@ def main_loop(
 
     objective.to(device)
 
-    for epoch in range(num_epochs):
-        _ = train_loop(model, train_loader, optimizer, weight_optimizer, objective, device, epoch, num_epochs)
-        _ = val_loop(model, val_loader, objective, device, epoch, num_epochs)
+    # When resuming, epochs continue from start_epoch so checkpoint numbering carries on
+    final_epoch = start_epoch + num_epochs
+    for epoch in range(start_epoch, final_epoch):
+        _ = train_loop(model, train_loader, optimizer, objective, device, epoch, final_epoch, mixed_precision=mixed_precision)
+        _ = val_loop(model, val_loader, objective, device, epoch, final_epoch, mixed_precision=mixed_precision)
 
-        torch.save(model.state_dict(), output_dir / f"epoch_{epoch + 1}.pth")
+        # The model name lets eval.py rebuild the right architecture
+        torch.save({"model": model_name, "epoch": epoch + 1, "state_dict": model.state_dict()}, output_dir / f"epoch_{epoch + 1}.pth")

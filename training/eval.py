@@ -1,4 +1,4 @@
-from modules.model import StyleTransferModel
+from modules.model import MODELS, read_checkpoint
 
 from torchvision.transforms import Compose, Lambda, Resize, ToTensor
 from torchvision.transforms.functional import center_crop
@@ -26,10 +26,10 @@ def parse_args():
     return args
 
 def load_model(checkpoint_path: str, device: torch.device):
-    model = StyleTransferModel()
+    model_name, state_dict = read_checkpoint(torch.load(checkpoint_path, map_location=device))
 
-    # main_loop saves the state dict directly, not wrapped in a dict
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    model = MODELS[model_name]()
+    model.load_state_dict(state_dict)
 
     return model.to(device)
 
@@ -39,7 +39,7 @@ def crop_to_multiple_of_8(image: torch.Tensor):
     return center_crop(image, [height - height % 8, width - width % 8])
 
 def infer(
-    model: StyleTransferModel,
+    model: torch.nn.Module,
     content_image_path: str,
     style_image_path: str,
     size: int = 512,
@@ -59,7 +59,8 @@ def infer(
     with torch.no_grad():
         stylized_image = model(content_image, style_image)
 
-    return stylized_image.squeeze(0).permute(1, 2, 0).cpu().numpy()
+    # The decoder's output is unbounded, so clip to a valid image range
+    return stylized_image.clamp(0, 1).squeeze(0).permute(1, 2, 0).cpu().numpy()
 
 def show_stylized_image(stylized_image):
     plt.imshow(stylized_image)
