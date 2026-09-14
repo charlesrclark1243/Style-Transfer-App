@@ -1,12 +1,15 @@
-import torch.nn.functional as F
-import torch.nn as nn
 import torch
+import torch.nn.functional as F
+from torch import nn
+
 
 class StyleLoss(nn.Module):
     def __init__(self):
-        super(StyleLoss, self).__init__()
+        super().__init__()
 
-    def forward(self, stylized_features, style_features):
+    def forward(
+        self, stylized_features: torch.Tensor, style_features: torch.Tensor
+    ) -> torch.Tensor:
         stylized_mean = torch.mean(stylized_features, dim=[2, 3], keepdim=True)
         stylized_std = torch.std(stylized_features, dim=[2, 3], keepdim=True)
 

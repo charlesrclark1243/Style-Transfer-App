@@ -1,18 +1,19 @@
-import torch.nn as nn
 import torch
-
-from torchvision.models import vgg19, VGG19_Weights
+from torch import nn
+from torchvision.models import VGG19_Weights, vgg19
 
 # Slice ends in vgg19().features for relu1_1, relu2_1, relu3_1 and relu4_1
 VGG_LAYER_ENDS = [2, 7, 12, 21]
+
 
 class VGGEncoder(nn.Module):
     """
     Frozen ImageNet VGG19 up to relu4_1. Takes images in [0, 1] and returns a list of features
     at relu1_1, relu2_1, relu3_1 and relu4_1.
     """
+
     def __init__(self):
-        super(VGGEncoder, self).__init__()
+        super().__init__()
 
         vgg = list(vgg19(weights=VGG19_Weights.DEFAULT).features.children())
         starts = [0] + VGG_LAYER_ENDS[:-1]
@@ -22,10 +23,14 @@ class VGGEncoder(nn.Module):
         for param in self.blocks.parameters():
             param.requires_grad = False
 
-        self.register_buffer('mean', torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
-        self.register_buffer('std', torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+        self.register_buffer(
+            "mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+        )
+        self.register_buffer(
+            "std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+        )
 
-    def forward(self, image):
+    def forward(self, image: torch.Tensor) -> list[torch.Tensor]:
         x = (image - self.mean) / self.std
 
         features = []

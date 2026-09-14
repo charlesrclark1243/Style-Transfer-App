@@ -1,11 +1,12 @@
-import torch.nn as nn
 import torch
+from torch import nn
+
 
 class TotalVariationLoss(nn.Module):
     def __init__(self):
-        super(TotalVariationLoss, self).__init__()
+        super().__init__()
 
-    def forward(self, image):
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
         vertical = torch.abs(image[:, :, 1:, :] - image[:, :, :-1, :])
         horizontal = torch.abs(image[:, :, :, 1:] - image[:, :, :, :-1])
 
