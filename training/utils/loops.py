@@ -179,6 +179,7 @@ def main_loop(
             mixed_precision=mixed_precision,
         )
 
+        output_dir.mkdir(parents=True, exist_ok=True)
         torch.save(
             {"epoch": epoch + 1, "state_dict": model.state_dict()},
             output_dir / f"epoch_{epoch + 1}.pth",
