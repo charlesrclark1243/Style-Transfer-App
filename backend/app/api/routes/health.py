@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from app.api.routes import stylyze
+
 router = APIRouter()
 
 
@@ -9,7 +11,7 @@ def health():
     Check the health of the application.
 
     Returns:
-        Response: A simple status message.
+        Response: The application status and whether the style transfer model is loaded.
     """
 
-    return {"status": "ok"}
+    return {"status": "ok", "model_loaded": stylyze.model is not None}

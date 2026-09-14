@@ -1,14 +1,41 @@
+import logging
+import os
 import threading
 from io import BytesIO
+from pathlib import Path
 from typing import Annotated
 
 import torch
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile
+from models.model import StyleTransferModel, read_checkpoint
 from PIL import Image, UnidentifiedImageError
 from torchvision.transforms import Resize, ToTensor
 
-model = torch.load("path/to/your/model.pth")  # Load trained model here
-model.eval()
+logger = logging.getLogger(__name__)
+
+# Resolved from this file rather than the working directory, so the app finds the checkpoint however it's launched.
+# MODEL_CHECKPOINT overrides it, e.g. for weights mounted into the container
+DEFAULT_CHECKPOINT = Path(__file__).resolve().parents[3] / "checkpoints" / "epoch_6.pth"
+CHECKPOINT_PATH = Path(os.environ.get("MODEL_CHECKPOINT", DEFAULT_CHECKPOINT))
+
+
+def load_model(checkpoint_path: Path) -> StyleTransferModel | None:
+    """Loads the model, or returns None if the checkpoint is missing so the rest of the API still starts."""
+    if not checkpoint_path.is_file():
+        logger.warning(
+            "No model checkpoint at %s; /api/stylyze will return 503", checkpoint_path
+        )
+        return None
+
+    model = StyleTransferModel()
+    model.load_state_dict(
+        read_checkpoint(torch.load(checkpoint_path, map_location="cpu"))
+    )
+
+    return model.eval()
+
+
+model = load_model(CHECKPOINT_PATH)
 
 semaphore = threading.Semaphore(1)  # Limit to one inference at a time
 torch.set_num_threads(4)
@@ -82,6 +109,11 @@ def stylyze(
         Response: The stylized image in JPEG format.
     """
 
+    if model is None:
+        raise HTTPException(
+            status_code=503, detail="The style transfer model is not loaded."
+        )
+
     content_image = Resize(512)(load_image(content))
     style_image = Resize(512)(load_image(style))
 
@@ -92,9 +124,7 @@ def stylyze(
     style_image = ToTensor()(style_image).unsqueeze(0)  # Add batch dimension
 
     with torch.no_grad(), semaphore:
-        stylyzed_image = model(
-            content_image, style_image
-        )  # Adjust this line based on model's input/output
+        stylyzed_image = model(content_image, style_image)
 
     # Convert the output tensor to a PIL image
     stylyzed_image = stylyzed_image.squeeze(0).permute(1, 2, 0).cpu().numpy()
@@ -103,6 +133,7 @@ def stylyze(
     )
 
     buffer = BytesIO()
-    stylyzed_image.save(buffer, format="JPEG")
+    # Quality 90 keeps painterly textures clean; the default of 75 visibly blocks them
+    stylyzed_image.save(buffer, format="JPEG", quality=90)
 
     return Response(content=buffer.getvalue(), media_type="image/jpeg")

@@ -9,7 +9,16 @@ dependencies = [
     "uvicorn[standard]>=0.52.4",
     "torch>=2.0.0",
     "torchvision>=0.29.0",
-    "tqdm>=4.70.1",
-    "matplotlib>=3.11.2",
     "python-multipart>=0.0.32",
+    "pillow>=12.3.0",
+    "numpy>=2.5.2",
 ]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

@@ -9,4 +9,4 @@ __pycache__/
 # directories
 data/
 results/
-checkpoints/
+training/checkpoints/
