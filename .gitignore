@@ -1,0 +1,12 @@
+# python bytecode
+__pycache__/
+
+# dot-directories
+.venv/
+.vscode/
+./angular/
+
+# directories
+data/
+results/
+checkpoints/
