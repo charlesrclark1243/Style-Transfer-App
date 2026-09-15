@@ -1,0 +1,22 @@
+<div class="compare" [style.--position]="position() + '%'">
+  <img class="after" [src]="after()" alt="Stylized image" />
+  <img class="before" [src]="before()" alt="Original image" />
+
+  <div class="divider" aria-hidden="true">
+    <span class="handle"><mat-icon>swap_horiz</mat-icon></span>
+  </div>
+
+  <!-- An invisible range input covers the image, giving dragging, clicking and arrow keys for free -->
+  <input
+    type="range"
+    min="0"
+    max="100"
+    step="0.1"
+    aria-label="Compare original and stylized image"
+    [value]="position()"
+    (input)="onInput($event)"
+  />
+
+  <span class="tag tag-before">Original</span>
+  <span class="tag tag-after">Stylized</span>
+</div>

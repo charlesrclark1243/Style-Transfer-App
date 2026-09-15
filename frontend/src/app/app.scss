@@ -1,3 +1,12 @@
+.toolbar {
+  gap: 8px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.brand {
+  font: var(--mat-sys-title-large);
+}
+
 main {
   max-width: 1200px;
   margin: 0 auto;
@@ -8,9 +17,19 @@ main {
   gap: 40px;
 }
 
-h1 {
-  font: var(--mat-sys-display-medium);
-  margin: 0;
+.intro {
+  text-align: center;
+
+  h1 {
+    font: var(--mat-sys-display-medium);
+    margin: 0 0 8px;
+  }
+
+  p {
+    font: var(--mat-sys-body-large);
+    color: var(--mat-sys-on-surface-variant);
+    margin: 0;
+  }
 }
 
 .pickers {
@@ -29,9 +48,10 @@ mat-progress-bar {
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  width: 100%;
 
-  img {
-    max-width: min(100%, 720px);
-    border-radius: var(--mat-sys-corner-large);
+  h2 {
+    font: var(--mat-sys-headline-small);
+    margin: 0;
   }
 }

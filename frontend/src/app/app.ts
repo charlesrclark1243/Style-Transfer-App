@@ -1,14 +1,30 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatToolbarModule } from '@angular/material/toolbar';
 import { firstValueFrom } from 'rxjs';
+import { CompareSlider } from './components/compare-slider/compare-slider';
 import { ImagePicker } from './components/image-picker/image-picker';
+import { STYLE_PRESETS } from './presets';
 import { Stylyze } from './services/stylyze';
 
+interface Result {
+  before: string;
+  after: string;
+}
+
 @Component({
-  imports: [ImagePicker, MatButtonModule, MatProgressBarModule],
+  imports: [
+    CompareSlider,
+    ImagePicker,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressBarModule,
+    MatToolbarModule,
+  ],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',
@@ -17,9 +33,11 @@ export class App implements OnDestroy {
   private readonly stylyzeService = inject(Stylyze);
   private readonly snackBar = inject(MatSnackBar);
 
+  protected readonly stylePresets = STYLE_PRESETS;
+
   protected readonly content = signal<File | null>(null);
   protected readonly style = signal<File | null>(null);
-  protected readonly resultUrl = signal<string | null>(null);
+  protected readonly result = signal<Result | null>(null);
   protected readonly loading = signal(false);
 
   protected async stylyze() {
@@ -31,7 +49,8 @@ export class App implements OnDestroy {
     try {
       const blob = await firstValueFrom(this.stylyzeService.stylyze(content, style));
       this.revokeResult();
-      this.resultUrl.set(URL.createObjectURL(blob));
+      // Keeps its own URL for the content image, so the comparison still matches after a new one is picked
+      this.result.set({ before: URL.createObjectURL(content), after: URL.createObjectURL(blob) });
     } catch (err) {
       this.snackBar.open(await errorMessage(err), 'Dismiss', { duration: 6000 });
     } finally {
@@ -44,8 +63,10 @@ export class App implements OnDestroy {
   }
 
   private revokeResult() {
-    const url = this.resultUrl();
-    if (url) URL.revokeObjectURL(url);
+    const result = this.result();
+    if (!result) return;
+    URL.revokeObjectURL(result.before);
+    URL.revokeObjectURL(result.after);
   }
 }
 

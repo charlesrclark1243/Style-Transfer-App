@@ -1,14 +1,47 @@
 <div class="picker">
-    <h2>{{ label() }}</h2>
+  <h2>{{ label() }}</h2>
 
+  <div
+    class="drop-zone"
+    [class.dragging]="dragging()"
+    (click)="fileInput.click()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="dragging.set(false)"
+    (drop)="onDrop($event)"
+  >
     @if (previewUrl(); as url) {
-        <img [src]="url" [alt]="label() + ' preview'" />
+      <img [src]="url" [alt]="label() + ' preview'" />
     } @else {
-        <div class="placeholder">No image selected</div>
+      <div class="placeholder">
+        <mat-icon>add_photo_alternate</mat-icon>
+        <span>Drop an image here</span>
+      </div>
     }
+  </div>
 
-    <input #fileInput type="file" accept="image/png,image/jpeg" hidden (change)="onFileChange($event)" />
-    <button matButton="filled" (click)="fileInput.click()">
-        {{ previewUrl() ? 'Change Image' : 'Select Image' }}
-    </button>
+  <input #fileInput type="file" accept="image/png,image/jpeg" hidden (change)="onFileChange($event)" />
+  <button matButton="filled" (click)="fileInput.click()">
+    {{ previewUrl() ? 'Change Image' : 'Select Image' }}
+  </button>
+
+  @if (presets().length) {
+    <div class="presets">
+      <span class="presets-label">Or try a famous painting</span>
+      <div class="preset-list">
+        @for (preset of presets(); track preset.url) {
+          <button
+            type="button"
+            class="preset"
+            [class.selected]="selectedPreset() === preset"
+            [attr.aria-pressed]="selectedPreset() === preset"
+            [attr.aria-label]="preset.name"
+            [title]="preset.name"
+            (click)="selectPreset(preset)"
+          >
+            <img [src]="preset.url" alt="" />
+          </button>
+        }
+      </div>
+    </div>
+  }
 </div>

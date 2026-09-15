@@ -10,22 +10,111 @@ h2 {
   margin: 0;
 }
 
-img,
-.placeholder {
+.drop-zone {
   width: 100%;
   max-width: 480px;
   aspect-ratio: 1;
   border-radius: var(--mat-sys-corner-large);
-}
+  outline: 3px solid transparent;
+  outline-offset: 4px;
+  cursor: pointer;
+  transition: outline-color 150ms;
 
-img {
-  object-fit: cover;
+  // Children would fire dragleave as the cursor crosses them, making the highlight flicker
+  > * {
+    pointer-events: none;
+  }
+
+  &.dragging {
+    outline-color: var(--mat-sys-primary);
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+  }
 }
 
 .placeholder {
-  display: grid;
-  place-items: center;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
   border: 2px dashed var(--mat-sys-outline-variant);
+  border-radius: inherit;
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-large);
+  transition:
+    background-color 150ms,
+    border-color 150ms;
+
+  mat-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 48px;
+  }
+
+  .dragging & {
+    background-color: var(--mat-sys-primary-container);
+    border-color: var(--mat-sys-primary);
+  }
+}
+
+.presets {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.presets-label {
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.preset {
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mat-sys-corner-medium);
+  overflow: hidden;
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  cursor: pointer;
+  transition:
+    outline-color 150ms,
+    transform 150ms;
+
+  &:hover {
+    transform: scale(1.06);
+  }
+
+  &:focus-visible {
+    outline-color: var(--mat-sys-outline);
+  }
+
+  &.selected {
+    outline-color: var(--mat-sys-primary);
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }

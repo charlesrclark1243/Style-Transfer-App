@@ -1,0 +1,90 @@
+:host {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+}
+
+.compare {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--mat-sys-corner-large);
+  user-select: none;
+}
+
+img {
+  display: block;
+  width: 100%;
+}
+
+// The after image sets the size. The backend crops the content image from the top-left
+// to make its sides multiples of 8, so anchoring the before image there keeps the two lined up
+.before {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+  clip-path: inset(0 calc(100% - var(--position)) 0 0);
+}
+
+.divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--position);
+  width: 3px;
+  translate: -50%;
+  background: white;
+  box-shadow: 0 0 8px rgb(0 0 0 / 40%);
+  pointer-events: none;
+}
+
+.handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: white;
+  color: var(--mat-sys-primary);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 40%);
+}
+
+input[type='range'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+
+// The range input itself is invisible, so show its keyboard focus on the handle
+.compare:has(input:focus-visible) .handle {
+  outline: 3px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+}
+
+.tag {
+  position: absolute;
+  top: 12px;
+  padding: 4px 12px;
+  border-radius: var(--mat-sys-corner-full);
+  background: rgb(0 0 0 / 55%);
+  color: white;
+  font: var(--mat-sys-label-large);
+  pointer-events: none;
+}
+
+.tag-before {
+  left: 12px;
+}
+
+.tag-after {
+  right: 12px;
+}

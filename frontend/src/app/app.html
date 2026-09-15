@@ -1,9 +1,17 @@
+<mat-toolbar class="toolbar">
+  <mat-icon>palette</mat-icon>
+  <span class="brand">stylyze</span>
+</mat-toolbar>
+
 <main>
-  <h1>stylyze</h1>
+  <header class="intro">
+    <h1>stylyze</h1>
+    <p>Pick a photo and a style, and a neural network repaints the photo in that style.</p>
+  </header>
 
   <div class="pickers">
     <app-image-picker label="Content" (fileSelected)="content.set($event)" />
-    <app-image-picker label="Style" (fileSelected)="style.set($event)" />
+    <app-image-picker label="Style" [presets]="stylePresets" (fileSelected)="style.set($event)" />
   </div>
 
   <button matButton="filled" [disabled]="!content() || !style() || loading()" (click)="stylyze()">
@@ -14,11 +22,14 @@
     <mat-progress-bar mode="indeterminate" />
   }
 
-  @if (resultUrl(); as url) {
+  @if (result(); as images) {
     <section class="result">
       <h2>Result</h2>
-      <img [src]="url" alt="Stylized image" />
-      <a matButton="outlined" [href]="url" download="stylyzed.jpg">Download</a>
+      <app-compare-slider [before]="images.before" [after]="images.after" />
+      <a matButton="outlined" [href]="images.after" download="stylyzed.jpg">
+        <mat-icon>download</mat-icon>
+        Download
+      </a>
     </section>
   }
 </main>
