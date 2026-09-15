@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 import torch
-from fastapi import APIRouter, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
 from models.model import StyleTransferModel, read_checkpoint
 from PIL import Image, UnidentifiedImageError
 from torchvision.transforms import Resize, ToTensor
@@ -97,6 +97,7 @@ def load_image(file: UploadFile):
 def stylyze(
     content: Annotated[UploadFile, File(...)],
     style: Annotated[UploadFile, File(...)],
+    alpha: Annotated[float, Form(ge=0.0, le=1.0)] = 1.0,
 ):
     """
     Perform style transfer on the uploaded content and style images using the pre-trained model. Returns the stylized image.
@@ -104,6 +105,7 @@ def stylyze(
     Args:
         content (UploadFile): The content image file.
         style (UploadFile): The style image file.
+        alpha (float): Style strength, from 0 (keep the content's look) to 1 (full style). Defaults to 1.
 
     Returns:
         Response: The stylized image in JPEG format.
@@ -124,7 +126,7 @@ def stylyze(
     style_image = ToTensor()(style_image).unsqueeze(0)  # Add batch dimension
 
     with torch.no_grad(), semaphore:
-        stylyzed_image = model(content_image, style_image)
+        stylyzed_image = model(content_image, style_image, alpha)
 
     # Convert the output tensor to a PIL image
     stylyzed_image = stylyzed_image.squeeze(0).permute(1, 2, 0).cpu().numpy()
