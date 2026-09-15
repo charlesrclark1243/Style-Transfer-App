@@ -39,6 +39,30 @@ main {
   width: 100%;
 }
 
+.strength {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 480px;
+
+  label {
+    font: var(--mat-sys-title-medium);
+  }
+
+  mat-slider {
+    width: 100%;
+  }
+}
+
+.strength-scale {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
 mat-progress-bar {
   max-width: 480px;
 }

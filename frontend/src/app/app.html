@@ -14,6 +14,17 @@
     <app-image-picker label="Style" [presets]="stylePresets" (fileSelected)="style.set($event)" />
   </div>
 
+  <div class="strength">
+    <label for="strength">Style strength</label>
+    <mat-slider min="0" max="1" step="0.05" discrete [displayWith]="formatStrength">
+      <input id="strength" matSliderThumb [(value)]="alpha" />
+    </mat-slider>
+    <div class="strength-scale" aria-hidden="true">
+      <span>Photo</span>
+      <span>Painting</span>
+    </div>
+  </div>
+
   <button matButton="filled" [disabled]="!content() || !style() || loading()" (click)="stylyze()">
     {{ loading() ? 'Stylizing…' : 'Stylize' }}
   </button>

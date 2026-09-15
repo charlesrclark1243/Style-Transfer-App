@@ -3,6 +3,7 @@ import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSliderModule } from '@angular/material/slider';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { firstValueFrom } from 'rxjs';
@@ -23,6 +24,7 @@ interface Result {
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
+    MatSliderModule,
     MatToolbarModule,
   ],
   selector: 'app-root',
@@ -40,6 +42,13 @@ export class App implements OnDestroy {
   protected readonly result = signal<Result | null>(null);
   protected readonly loading = signal(false);
 
+  // Style strength: 1 applies the full style, lower values keep more of the photo. Below 1 is gentler on faces
+  protected readonly alpha = signal(0.8);
+
+  protected formatStrength(value: number) {
+    return `${Math.round(value * 100)}%`;
+  }
+
   protected async stylyze() {
     const content = this.content();
     const style = this.style();
@@ -47,7 +56,7 @@ export class App implements OnDestroy {
 
     this.loading.set(true);
     try {
-      const blob = await firstValueFrom(this.stylyzeService.stylyze(content, style));
+      const blob = await firstValueFrom(this.stylyzeService.stylyze(content, style, this.alpha()));
       this.revokeResult();
       // Keeps its own URL for the content image, so the comparison still matches after a new one is picked
       this.result.set({ before: URL.createObjectURL(content), after: URL.createObjectURL(blob) });
