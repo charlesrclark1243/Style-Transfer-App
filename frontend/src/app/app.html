@@ -1,0 +1,24 @@
+<main>
+  <h1>stylyze</h1>
+
+  <div class="pickers">
+    <app-image-picker label="Content" (fileSelected)="content.set($event)" />
+    <app-image-picker label="Style" (fileSelected)="style.set($event)" />
+  </div>
+
+  <button matButton="filled" [disabled]="!content() || !style() || loading()" (click)="stylyze()">
+    {{ loading() ? 'Stylizing…' : 'Stylize' }}
+  </button>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (resultUrl(); as url) {
+    <section class="result">
+      <h2>Result</h2>
+      <img [src]="url" alt="Stylized image" />
+      <a matButton="outlined" [href]="url" download="stylyzed.jpg">Download</a>
+    </section>
+  }
+</main>

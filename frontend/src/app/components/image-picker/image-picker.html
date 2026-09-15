@@ -1,0 +1,14 @@
+<div class="picker">
+    <h2>{{ label() }}</h2>
+
+    @if (previewUrl(); as url) {
+        <img [src]="url" [alt]="label() + ' preview'" />
+    } @else {
+        <div class="placeholder">No image selected</div>
+    }
+
+    <input #fileInput type="file" accept="image/png,image/jpeg" hidden (change)="onFileChange($event)" />
+    <button matButton="filled" (click)="fileInput.click()">
+        {{ previewUrl() ? 'Change Image' : 'Select Image' }}
+    </button>
+</div>
